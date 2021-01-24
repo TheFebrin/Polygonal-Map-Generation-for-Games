@@ -9,6 +9,7 @@
 * [Status](#status)
 
 ## General info
+* Based on http://www-cs-students.stanford.edu/~amitp/game-programming/polygon-map-generation/
 
 #### Introduction:
 * todo
