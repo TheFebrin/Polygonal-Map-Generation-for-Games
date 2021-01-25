@@ -79,8 +79,8 @@ class Graph:
                 centers[c2].borders.append(edge)
                 corners[cor1].protrudes.append(edge)
                 corners[cor2].protrudes.append(edge)
-                corners[cor1].adjacent.append(cor2)
-                corners[cor2].adjacent.append(cor1)
+                corners[cor1].adjacent.append(corners[cor2])
+                corners[cor2].adjacent.append(corners[cor1])
 
                 edges[(c1, c2)] = edge
 
