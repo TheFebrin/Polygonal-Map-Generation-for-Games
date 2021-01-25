@@ -1,6 +1,8 @@
 from __future__ import absolute_import
-from src.voronoi import VoronoiPolygons
 import matplotlib.pyplot as plt
+
+from src.terrain import TerrainType
+from src.voronoi import VoronoiPolygons
 
 
 class Center:
@@ -10,6 +12,7 @@ class Center:
         self.neighbors = []
         self.borders = []
         self.corners = []
+        self.terrain_type = TerrainType.LAND
 
 
 class Corner:
@@ -27,6 +30,13 @@ class Edge:
         self.d1 = center2
         self.v0 = corner1
         self.v1 = corner2
+    
+    def is_edge_to_map_end(self):
+        """
+        Function defining, whether the edge is connected to the end of the map.
+        """
+        corner_coordinates = [self.v0.x, self.v0.y, self.v1.x, self.v1.y]
+        return any([corner_coordinate in [0, 1] for corner_coordinate in corner_coordinates])
 
 
 class Graph:
