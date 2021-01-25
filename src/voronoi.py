@@ -171,7 +171,7 @@ class VoronoiPolygons:
             for x, y in poly.exterior.coords[:-1]:
                 p = np.array([x, y])
                 for i, v in enumerate(new_vertices):
-                    if np.sum((v - p) ** 2) <= 1e-5:
+                    if np.sum((v - p) ** 2) <= 1e-8:
                         region_elements.append(i)
                         break
                 else:
@@ -201,9 +201,14 @@ class VoronoiPolygons:
                 poly2 = Polygon(vertices[region2])
 
                 if poly1.intersects(poly2):
-                    neighbors[i].append(j)
                     intersection = np.array(poly1.intersection(poly2).coords)
-                    intersecions[i].append(intersection)
+                    if len(intersection) < 2:
+                        continue
+                    v1 = ((vertices - intersection[0])**2).sum(axis=1).argmin()
+                    v2 = ((vertices - intersection[1])**2).sum(axis=1).argmin()
+                    intersecions[i].append([v1,v2])
+                    neighbors[i].append(j)
+
         return neighbors, intersecions
 
     def generate_Voronoi(
@@ -220,7 +225,7 @@ class VoronoiPolygons:
             vertices - list of vertices
             regions - indexes of vertices creating each region
             neighbors - indexes of neighbors regions for each region
-            intersecions - lines separating each two neighbors
+            intersecions - indexes of vertices creating line separating each two neighbors
         """
 
         for iter in range(iterations + 1):

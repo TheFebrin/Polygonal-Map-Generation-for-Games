@@ -1,5 +1,6 @@
 from __future__ import absolute_import
-from voronoi import VoronoiPolygons
+from src.voronoi import VoronoiPolygons
+import matplotlib.pyplot as plt
 
 
 class Center:
@@ -35,7 +36,7 @@ class Graph:
             self._neighbors, self._intersecions \
             = voronoi_polygons.generate_Voronoi(iterations=iterations)
 
-        self._centers, self._corners, self._edges = self.initialize_graph()
+        self.centers, self.corners, self.edges = self.initialize_graph()
 
     def initialize_graph(self):
         # creating center object for each point
@@ -50,10 +51,17 @@ class Graph:
             corner = Corner(v[0], v[1])
             corners.append(corner)
 
+        corners_inside = [
+                (0 <= corner.x <= 1) and 
+                (0 <= corner.y <= 1) and 
+                ((0 != corner.x and 1 != corner.x) or 
+                (0 != corner.y and 1 != corner.y)) 
+            for corner in corners]
+
         # setting neighbors and corners lists for each center
         for i, c in enumerate(centers):
             c.neighbors = [centers[k] for k in self._neighbors[i]]
-            c.corners = [corners[k] for k in self._regions[i]]
+            c.corners = [corners[k] for k in self._regions[i] if corners_inside[k]]
 
         for i, corners_list in enumerate(self._regions):
             for cor in corners_list:
@@ -66,9 +74,6 @@ class Graph:
                     continue
 
                 cor1, cor2 = self._intersecions[c1][i]
-                print(c1, c2, cor1, cor2)
-                # TODO: FIX TypeError: only integer scalar arrays can be converted to a scalar index
-
                 edge = Edge(centers[c1], centers[c2], corners[cor1], corners[cor2])
                 centers[c1].borders.append(edge)
                 centers[c2].borders.append(edge)
@@ -79,8 +84,30 @@ class Graph:
 
                 edges[(c1, c2)] = edge
 
+        corners = [corner for i,corner in enumerate(corners) if corners_inside[i]]
+        edges = list(edges.values())
+
         return centers, corners, edges
+
+    def plot_map(self):
+        plt.figure(figsize=(10,10))
+        plt.rcParams['axes.facecolor'] = 'grey'
+        
+        plt.scatter(
+            [center.x for center in self.centers], 
+            [center.y for center in self.centers], c='red')
+        plt.scatter(
+            [corner.x for corner in self.corners], 
+            [corner.y for corner in self.corners], c='blue')
+        for edge in self.edges:
+            plt.plot([edge.v0.x, edge.v1.x], [edge.v0.y, edge.v1.y], c='white')
+            plt.plot([edge.d0.x, edge.d1.x], [edge.d0.y, edge.d1.y], c='black')
+
+        plt.xlim(0,1)
+        plt.ylim(0,1)
+        plt.show()
 
 
 if __name__ == '__main__':
     g = Graph(N=25, iterations=2)
+    g.plot_map()
