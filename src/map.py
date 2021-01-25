@@ -1,5 +1,9 @@
 from __future__ import absolute_import
+import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.patches import Polygon
+from matplotlib.collections import PatchCollection
+from scipy.spatial import ConvexHull
 
 from src.terrain import TerrainType
 from src.voronoi import VoronoiPolygons
@@ -116,6 +120,47 @@ class Graph:
         plt.xlim(0,1)
         plt.ylim(0,1)
         plt.show()
+    
+    def plot_map_with_terrain_types(self):
+        fig, ax = plt.subplots(figsize=(10, 10))
+        plt.scatter(
+            [center.x for center in self.centers],
+            [center.y for center in self.centers], c='red')
+        plt.scatter(
+            [corner.x for corner in self.corners],
+            [corner.y for corner in self.corners], c='blue')
+        for edge in self.edges:
+            plt.plot([edge.v0.x, edge.v1.x], [edge.v0.y, edge.v1.y], c='white')
+            plt.plot([edge.d0.x, edge.d1.x], [edge.d0.y, edge.d1.y], c='black')
+        
+        polygons = [self._center_to_polygon(center) for center in self.centers]
+        p = PatchCollection(polygons, match_original=True)
+        ax.add_collection(p)
+        ax.set_xlim(0, 1)
+        ax.set_ylim(0, 1)
+        plt.show()
+    
+    def _center_to_polygon(self, center):
+        """
+        Helper function for plotting, which takes the center and returns a polygon which can be plotted.
+        """
+        if center.terrain_type is TerrainType.LAND:
+            color = 'green'
+        elif center.terrain_type is TerrainType.OCEAN:
+            color = 'blue'
+        elif center.terrain_type is TerrainType.COAST:
+            color = 'yellow'
+        elif center.terrain_type is TerrainType.LAKE:
+            color = 'red'
+        else:
+            raise AttributeError(f'Unexpected terrain type: {center.terrain_type}')
+
+        corner_coordinates = np.array([[corner.x, corner.y] for corner in center.corners])
+        hull = ConvexHull(corner_coordinates)
+        vertices = hull.vertices
+        vertices = np.append(vertices, vertices[0])
+        xs, ys = corner_coordinates[vertices, 0], corner_coordinates[vertices, 1]
+        return Polygon(np.c_[xs, ys], facecolor=color, edgecolor='black', linewidth=2)
 
 
 if __name__ == '__main__':
