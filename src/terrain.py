@@ -92,10 +92,10 @@ def assign_terrain_types_to_graph(
         else:
             # Check which type of polygons it touches. If it touches water and land polygons - it's a coast, otherwise
             # it's a land.
-            touches_water = any([center.terrain_type in [TerrainType.OCEAN, TerrainType.LAKE] for center in corner.touches])
+            touches_ocean = any([center.terrain_type is TerrainType.OCEAN for center in corner.touches])
             touches_land = any([center.terrain_type in [TerrainType.LAND, TerrainType.COAST] for center in corner.touches])
             
-            if touches_water and touches_land:
+            if touches_ocean and touches_land:
                 corner.terrain_type = TerrainType.COAST
             else:
                 corner.terrain_type = TerrainType.LAND
