@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+from collections import deque
 from enum import Enum
 import numpy as np
 
@@ -11,22 +12,27 @@ class TerrainType(Enum):
 
 
 # Minimum ratio of the water edges to the total, in order to center become a water.
-MIN_WATER_EDGES_RATIO_TO_BE_WATER_CENTER = 0.15
+MIN_WATER_EDGES_RATIO_TO_BE_WATER_CENTER = 0.25
+
+CHANCE_OF_WATER_EDGE_IN_MIDDLE = 0.1
 
 
-def assign_terrain_types_to_graph(graph, min_water_ratio=MIN_WATER_EDGES_RATIO_TO_BE_WATER_CENTER):
+def assign_terrain_types_to_graph(
+    graph,
+    min_water_ratio=MIN_WATER_EDGES_RATIO_TO_BE_WATER_CENTER,
+    chance_of_water_edge_in_middle=CHANCE_OF_WATER_EDGE_IN_MIDDLE,
+):
     """
     Sets the corners and centers of the graph to the terrain types.
     Updates the fields of the graph.
     """
     
-    edges_to_map_end = [edge for edge in graph.edges if edge.is_edge_to_map_end()]
-    
-    water_edges = edges_to_map_end
-    unexpanded_water_edges = edges_to_map_end
+    water_edges = [edge for edge in graph.edges
+                   if edge.is_edge_to_map_end() or np.random.rand() < chance_of_water_edge_in_middle]
+    unexpanded_water_edges = water_edges
     
     water_to_total_ratio = np.random.rand() / 5 + 0.5  # 50% - 70% of the edges will be the water.
-    water_edges_expected = int(len(graph.edges) * water_to_total_ratio) - len(edges_to_map_end)
+    water_edges_expected = int(len(graph.edges) * water_to_total_ratio)
     
     while len(water_edges) < water_edges_expected:
         selected_edge_idx = np.random.randint(len(unexpanded_water_edges))
@@ -40,28 +46,32 @@ def assign_terrain_types_to_graph(graph, min_water_ratio=MIN_WATER_EDGES_RATIO_T
                     water_edges.append(edge)
                     unexpanded_water_edges.append(edge)
     
-    # Set all the water centers as an ocean.
+    # First set all the water centers which have an edge leading the to end of the map as an oceans. Then mark all of
+    # the water centers around them as oceans.
+    unexpanded_ocean_centers = deque()
+    
+    # Set all the water centers as the lake.
     for center in graph.centers:
         if np.mean([border in water_edges for border in center.borders]) >= min_water_ratio:
-            center.terrain_type = TerrainType.OCEAN
+            center.terrain_type = TerrainType.LAKE
+            end_map_center = any([edge.is_edge_to_map_end() for edge in center.borders])
+            if end_map_center:
+                unexpanded_ocean_centers.append(center)
     
-    # Set the water centers surrounded by the land as the lakes and set centers between ocean and the land as a coast.
-    for center in graph.centers:
-        if center.terrain_type is TerrainType.OCEAN:
-            is_lake = all([
-                neighbour.terrain_type in [TerrainType.LAND, TerrainType.LAKE] for neighbour in center.neighbors
-            ])
-            if is_lake:
-                center.terrain_type = TerrainType.LAKE
+    while len(unexpanded_ocean_centers) > 0:
+        center = unexpanded_ocean_centers.popleft()
+        center.terrain_type = TerrainType.OCEAN
         
-        elif center.terrain_type is TerrainType.LAND:
-            neighbours_with_ocean = any(
-                [neighbour.terrain_type == TerrainType.OCEAN for neighbour in center.neighbors]
+        for neighbor in center.neighbors:
+            if neighbor.terrain_type is TerrainType.LAKE:  # Water center, neighbors with ocean -> it's an ocean.
+                unexpanded_ocean_centers.append(neighbor)
+    
+    for center in graph.centers:
+        if center.terrain_type is TerrainType.LAND:
+            neighbors_with_ocean = any(
+                [neighbor.terrain_type is TerrainType.OCEAN for neighbor in center.neighbors]
             )
-            neighbours_with_land = any(
-                [neighbour.terrain_type in [TerrainType.LAND, TerrainType.COAST] for neighbour in center.neighbors]
-            )
-            if neighbours_with_ocean and neighbours_with_land:
+            if neighbors_with_ocean:
                 center.terrain_type = TerrainType.COAST
     
     for corner in graph.corners:
