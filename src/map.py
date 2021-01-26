@@ -148,11 +148,41 @@ class Graph:
             raise AttributeError(f'Unexpected terrain type: {center.terrain_type}')
 
         corner_coordinates = np.array([[corner.x, corner.y] for corner in center.corners])
+        if self._is_center_a_map_corner(center):
+            corner_coordinates = np.append(corner_coordinates, self._nearest_map_corner(corner_coordinates))
+            corner_coordinates = corner_coordinates.reshape(-1, 2)
         hull = ConvexHull(corner_coordinates)
         vertices = hull.vertices
         vertices = np.append(vertices, vertices[0])
         xs, ys = corner_coordinates[vertices, 0], corner_coordinates[vertices, 1]
         return Polygon(np.c_[xs, ys], facecolor=color, edgecolor='black', linewidth=2)
+    
+    def _is_center_a_map_corner(self, center):
+        """
+        Function returns True only when a center is in a one of 4 corners of the [0, 1]^2.
+        """
+        corner_coordinates = np.array([[corner.x, corner.y] for corner in center.corners])
+        xs, ys = corner_coordinates.T
+        return (np.any(xs == 0) or np.any(xs == 1)) and (np.any(ys == 0) or np.any(ys == 1))
+    
+    def _nearest_map_corner(self, corner_coordinates):
+        """
+        Assumes that a coordinates belong to the corner being in the corner of the map.
+        """
+        if np.any(corner_coordinates[:, 0] == 0):
+            if np.any(corner_coordinates[:, 1] == 0):
+                return [0, 0]
+            else:
+                return [0, 1]
+        else:
+            if np.any(corner_coordinates[:, 1] == 0):
+                return [1, 0]
+            else:
+                return [1, 1]
+            
+            
+        
+        
 
 
 if __name__ == '__main__':
