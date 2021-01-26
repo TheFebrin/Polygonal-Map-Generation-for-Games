@@ -26,6 +26,7 @@ class Corner:
         self.touches = []
         self.protrudes = []
         self.adjacent = []
+        self.terrain_type = TerrainType.LAND
 
 
 class Edge:

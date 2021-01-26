@@ -63,3 +63,29 @@ def assign_terrain_types_to_graph(graph, min_water_ratio=MIN_WATER_EDGES_RATIO_T
             )
             if neighbours_with_ocean and neighbours_with_land:
                 center.terrain_type = TerrainType.COAST
+    
+    for corner in graph.corners:
+        # If the corner is surrounded by polygons of the same type, it has their type too.
+        is_surrounded_by_ocean = all([center.terrain_type is TerrainType.OCEAN for center in corner.touches])
+        is_surrounded_by_lake = all([center.terrain_type is TerrainType.LAKE for center in corner.touches])
+        is_surrounded_by_land = all([center.terrain_type is TerrainType.LAND for center in corner.touches])
+        is_surrounded_by_coast = all([center.terrain_type is TerrainType.COAST for center in corner.touches])
+        
+        if is_surrounded_by_ocean:
+            corner.terrain_type = TerrainType.OCEAN
+        elif is_surrounded_by_land:
+            corner.terrain_type = TerrainType.LAND
+        elif is_surrounded_by_lake:
+            corner.terrain_type = TerrainType.LAKE
+        elif is_surrounded_by_coast:
+            corner.terrain_type = TerrainType.COAST
+        else:
+            # Check which type of polygons it touches. If it touches water and land polygons - it's a coast, otherwise
+            # it's a land.
+            touches_water = any([center.terrain_type in [TerrainType.OCEAN, TerrainType.LAKE] for center in corner.touches])
+            touches_land = any([center.terrain_type in [TerrainType.LAND, TerrainType.COAST] for center in corner.touches])
+            
+            if touches_water and touches_land:
+                corner.terrain_type = TerrainType.COAST
+            else:
+                corner.terrain_type = TerrainType.LAND
