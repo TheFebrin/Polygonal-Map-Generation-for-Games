@@ -124,15 +124,6 @@ class Graph:
     
     def plot_map_with_terrain_types(self):
         fig, ax = plt.subplots(figsize=(10, 10))
-        plt.scatter(
-            [center.x for center in self.centers],
-            [center.y for center in self.centers], c='red')
-        plt.scatter(
-            [corner.x for corner in self.corners],
-            [corner.y for corner in self.corners], c='blue')
-        for edge in self.edges:
-            plt.plot([edge.v0.x, edge.v1.x], [edge.v0.y, edge.v1.y], c='white')
-            plt.plot([edge.d0.x, edge.d1.x], [edge.d0.y, edge.d1.y], c='black')
         
         polygons = [self._center_to_polygon(center) for center in self.centers]
         p = PatchCollection(polygons, match_original=True)
@@ -152,7 +143,7 @@ class Graph:
         elif center.terrain_type is TerrainType.COAST:
             color = 'yellow'
         elif center.terrain_type is TerrainType.LAKE:
-            color = 'red'
+            color = 'lightblue'
         else:
             raise AttributeError(f'Unexpected terrain type: {center.terrain_type}')
 
