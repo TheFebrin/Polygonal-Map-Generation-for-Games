@@ -3,6 +3,25 @@ from collections import deque
 from enum import Enum
 import numpy as np
 
+def lighten_color(color, amount=0.5):
+    """
+    Lightens the given color by multiplying (1-luminosity) by the given amount.
+    Input can be matplotlib color string, hex string, or RGB tuple.
+
+    Examples:
+    >> lighten_color('g', 0.3)
+    >> lighten_color('#F034A3', 0.6)
+    >> lighten_color((.3,.55,.1), 0.5)
+    """
+    import matplotlib.colors as mc
+    import colorsys
+    try:
+        c = mc.cnames[color]
+    except:
+        c = color
+    c = colorsys.rgb_to_hls(*mc.to_rgb(c))
+    return colorsys.hls_to_rgb(c[0], min(1, c[1] * amount), c[2])
+
 
 class TerrainType(Enum):
     OCEAN = 1
@@ -99,3 +118,9 @@ def assign_terrain_types_to_graph(
                 corner.terrain_type = TerrainType.COAST
             else:
                 corner.terrain_type = TerrainType.LAND
+                
+    # Reset height of every corner and center to 0
+    for corner in graph.corners:
+        corner.height = 0
+    for center in graph.centers:
+        center.height = 0

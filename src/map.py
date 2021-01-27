@@ -1,11 +1,12 @@
 from __future__ import absolute_import
+import queue
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 from scipy.spatial import ConvexHull
 
-from src.terrain import TerrainType
+from src.terrain import TerrainType, lighten_color
 from src.voronoi import VoronoiPolygons
 
 
@@ -17,6 +18,7 @@ class Center:
         self.borders = []
         self.corners = []
         self.terrain_type = TerrainType.LAND
+        self.height = 0
 
 
 class Corner:
@@ -27,6 +29,7 @@ class Corner:
         self.protrudes = []
         self.adjacent = []
         self.terrain_type = TerrainType.LAND
+        self.height = 0
 
 
 class Edge:
@@ -80,7 +83,7 @@ class Graph:
 
         for i, corners_list in enumerate(self._regions):
             for cor in corners_list:
-                corners[cor].touches.append(i)
+                corners[cor].touches.append(centers[i])
 
         edges = {}
         for c1, neighbours_list in enumerate(self._neighbors):
@@ -122,12 +125,21 @@ class Graph:
         plt.ylim(0,1)
         plt.show()
     
-    def plot_map_with_terrain_types(self):
+    def plot_map_with_terrain_types(self, debug_height = False):
         fig, ax = plt.subplots(figsize=(10, 10))
         
         polygons = [self._center_to_polygon(center) for center in self.centers]
         p = PatchCollection(polygons, match_original=True)
         ax.add_collection(p)
+        if debug_height:
+            for center in self.centers:
+                if center.terrain_type == TerrainType.LAND:
+                    plt.annotate(f"{round(center.height, 1)}", (center.x, center.y), color = 'white', 
+                                backgroundcolor = 'black')
+            for corner in self.corners:
+                if corner.terrain_type == TerrainType.LAND:
+                    plt.annotate(f"{round(corner.height, 1)}", (corner.x, corner.y), color = 'white', 
+                                backgroundcolor = 'black')
         ax.set_xlim(0, 1)
         ax.set_ylim(0, 1)
         plt.show()
@@ -137,7 +149,7 @@ class Graph:
         Helper function for plotting, which takes the center and returns a polygon which can be plotted.
         """
         if center.terrain_type is TerrainType.LAND:
-            color = 'green'
+            color = lighten_color('green', amount = 1 + (center.height - 1) / 10)
         elif center.terrain_type is TerrainType.OCEAN:
             color = 'blue'
         elif center.terrain_type is TerrainType.COAST:
@@ -180,10 +192,40 @@ class Graph:
             else:
                 return [1, 1]
             
-            
+    def assign_corner_elevations(self):
+        '''
+        For every LAND corner, calculates its distance from the nearest corner of type COAST.
+        Runs BFS from every COAST corner. 
+        '''
+        for corner in self.corners:
+            if corner.terrain_type == TerrainType.LAND:
+                corner.height = float('inf')
+        border_corners = [corner for corner in self.corners if corner.terrain_type == TerrainType.COAST]
+        for border in border_corners:
+            q = queue.Queue()
+            q.put(border)
+            while not q.empty():
+                current_corner = q.get()
+                current_height = current_corner.height
+                for adjacent_corner in current_corner.adjacent:
+                    if (adjacent_corner.terrain_type == TerrainType.LAND and 
+                        current_height + 1 < adjacent_corner.height):
+                        adjacent_corner.height = current_height + 1
+                        q.put(adjacent_corner)
+        # Fixing heights of LAND corners to their default values in case there is a LAND surrounded by water.
+        for corner in self.corners:
+            if corner.terrain_type == TerrainType.LAND and corner.height == float('inf'):
+                corner.height = 1.0
+    
+    def assign_center_elevations(self):
+        '''
+        Calculates height for every center of type LAND by taking the mean height of corners that surround it.
+        '''
+        for center in self.centers:
+            if center.terrain_type == TerrainType.LAND:
+                corners_heights = [corner.height for corner in center.corners]
+                center.height = sum(corners_heights) / len(corners_heights)
         
-        
-
 
 if __name__ == '__main__':
     g = Graph(N=25, iterations=2)
