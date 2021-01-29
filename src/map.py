@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 from scipy.spatial import ConvexHull
+import plotly.graph_objs as go
 
 from src.terrain import TerrainType, lighten_color
 from src.voronoi import VoronoiPolygons
@@ -143,6 +144,50 @@ class Graph:
         ax.set_xlim(0, 1)
         ax.set_ylim(0, 1)
         plt.show()
+        
+    def plot_3d_height_map(self):
+        """Function for plotting terrain height (based on the height of the corners), as a plotly wireframe"""
+        lines = []
+        line_marker = dict(color='#0066FF', width=2)
+        
+        for e in self.edges:
+            lines.append(go.Scatter3d(
+                x=np.array([e.v0.x, e.v1.x]),
+                y=np.array([e.v0.y, e.v1.y]),
+                z=np.array([e.v0.height, e.v1.height]),
+                mode='lines', 
+                line=line_marker,
+            ))
+            
+        layout = go.Layout(
+            title='Height Map',
+            scene=dict(
+                xaxis=dict(
+                    gridcolor='rgb(255, 255, 255)',
+                    zerolinecolor='rgb(255, 255, 255)',
+                    showbackground=True,
+                    backgroundcolor='rgb(230, 230,230)'
+                ),
+                yaxis=dict(
+                    gridcolor='rgb(255, 255, 255)',
+                    zerolinecolor='rgb(255, 255, 255)',
+                    showbackground=True,
+                    backgroundcolor='rgb(230, 230,230)'
+                ),
+                zaxis=dict(
+                    gridcolor='rgb(255, 255, 255)',
+                    zerolinecolor='rgb(255, 255, 255)',
+                    showbackground=True,
+                    backgroundcolor='rgb(230, 230,230)',
+                    range=[0,2*max([max(e.v0.height, e.v1.height) for e in self.edges])]
+                )
+            ),
+            showlegend=False,
+        )
+        
+        fig = go.Figure(data=lines, layout=layout)
+        fig.show()
+    
     
     def _center_to_polygon(self, center):
         """
