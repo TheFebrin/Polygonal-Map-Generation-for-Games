@@ -42,6 +42,8 @@ def assign_terrain_types_to_graph(
     chance_of_water_edge_in_middle=CHANCE_OF_WATER_EDGE_IN_MIDDLE,
 ):
     """
+    :param graph: Mutable graph
+    
     Sets the corners and centers of the graph to the terrain types.
     Updates the fields of the graph.
     """
