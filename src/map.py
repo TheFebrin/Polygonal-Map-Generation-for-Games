@@ -178,8 +178,12 @@ class Graph:
                     gridcolor='rgb(255, 255, 255)',
                     zerolinecolor='rgb(255, 255, 255)',
                     showbackground=True,
-                    backgroundcolor='rgb(230, 230,230)',
-                    range=[0,2*max([max(e.v0.height, e.v1.height) for e in self.edges])]
+                    backgroundcolor='rgb(230, 230,230)'
+                ),
+                aspectratio=dict(
+                    x=1,
+                    y=1,
+                    z=0.2
                 )
             ),
             showlegend=False,
