@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 from scipy.spatial import ConvexHull
-from typing import *
 import plotly.graph_objs as go
 
 from src.terrain import TerrainType, lighten_color
@@ -22,7 +21,6 @@ class Center:
         self.corners = []
         self.terrain_type = TerrainType.LAND
         self.height = 0
-
 
 class Corner:
     def __init__(self, x, y):
@@ -141,9 +139,7 @@ class Graph:
         plt.ylim(0,1)
         plt.show()
 
-    def plot_full_map(
-        self, debug_height=False, river_arrows=False
-    ):
+    def plot_full_map(self, debug_height=False, river_arrows=False):
         """
         Here the next adjustments will be added to create a complete map.
         """
@@ -172,7 +168,7 @@ class Graph:
 
         ax.set_xlim(0, 1)
         ax.set_ylim(0, 1)
-        # plt.show()
+        plt.show()
 
     def plot_3d_height_map(self):
         """
@@ -308,7 +304,6 @@ class Graph:
         Calculates height for every center by taking the mean height of corners that surround it.
         '''
         for center in self.centers:
-<<<<<<< HEAD
             corners_heights = [corner.height for corner in center.corners]
             center.height = sum(corners_heights) / len(corners_heights)
             if center.terrain_type == TerrainType.LAKE:
@@ -321,11 +316,6 @@ class Graph:
             x = math.sqrt(scale_factor) - math.sqrt(scale_factor * (1 - y))
             corner.height = x
         
-=======
-            if center.terrain_type == TerrainType.LAND:
-                corners_heights = [corner.height for corner in center.corners]
-                center.height = sum(corners_heights) / len(corners_heights)
-
     def create_rivers(self, n, min_height):
         """
         Rivers flow from high elevations down to the coast.
@@ -369,7 +359,6 @@ class Graph:
 
             self.rivers.append(new_river)
 
->>>>>>> b825e99... wip
 
 if __name__ == '__main__':
     g = Graph(N=25, iterations=2)
