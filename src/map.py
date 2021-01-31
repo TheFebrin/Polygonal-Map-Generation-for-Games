@@ -3,6 +3,7 @@ import queue
 import numpy as np
 import math
 import matplotlib.pyplot as plt
+from typing import *
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 from scipy.spatial import ConvexHull
@@ -33,7 +34,7 @@ class Corner:
         :param:
         :param:
         :param height: height of the corner
-        :param downslope: index of the neighbour with the lowest height
+        :param downslope: index of the adjacent corner with the lowest height
         """
         self.x = x
         self.y = y
@@ -43,6 +44,9 @@ class Corner:
         self.terrain_type = TerrainType.LAND
         self.height = 0
         self.downslope = None
+
+    def get_cords(self) -> Tuple[float, float]:
+        return self.x, self.y
 
 
 class Edge:
@@ -62,13 +66,17 @@ class Edge:
 
 class Graph:
     def __init__(self, N: int = 25, iterations: int = 2):
+        """
+
+        :atribute rivers: List of rivers, where a river is a list of cords
+        """
         voronoi_polygons = VoronoiPolygons(N=N)
         self._points, self._centroids, self._vertices, self._regions, \
             self._neighbors, self._intersecions \
             = voronoi_polygons.generate_Voronoi(iterations=iterations)
 
         self.centers, self.corners, self.edges = self.initialize_graph()
-        self.rivers = []  # type: List[List[int]]
+        self.rivers = []  # type: List[List[Tuple[int, int]]]
 
     def initialize_graph(self):
         # creating center object for each point
@@ -139,7 +147,12 @@ class Graph:
         plt.ylim(0,1)
         plt.show()
 
-    def plot_full_map(self, debug_height=False, river_arrows=False):
+    def plot_full_map(
+        self, 
+        debug_height=False, 
+        downslope_arrows=False,
+        rivers=True,
+    ):
         """
         Here the next adjustments will be added to create a complete map.
         """
@@ -148,6 +161,8 @@ class Graph:
         polygons = [self._center_to_polygon(center) for center in self.centers]
         p = PatchCollection(polygons, match_original=True)
         ax.add_collection(p)
+
+        # PLOT HEIGHT LABELS
         if debug_height:
             for corner in self.corners:
                 plt.annotate(
@@ -155,16 +170,28 @@ class Graph:
                     color='white', backgroundcolor='black'
                 )
 
-        def drawArrow(A, B):
+        def drawArrow(A, B, color='darkblue'):
             plt.arrow(
                 A[0], A[1], B[0] - A[0], B[1] - A[1],
-                head_width=0.015, length_includes_head=True
+                head_width=0.015, length_includes_head=True, color=color
             )
 
-        for corner in self.corners:
-            if corner.downslope is not None:
-                adjacent = corner.adjacent[corner.downslope]
-                drawArrow(A=(corner.x, corner.y), B=(adjacent.x, adjacent.y))
+        # PLOT DOWNSLOPE ARROWS
+        if downslope_arrows:
+            for corner in self.corners:
+                if corner.downslope is not None:
+                    adjacent = corner.adjacent[corner.downslope]
+                    drawArrow(A=corner.get_cords(), B=adjacent.get_cords())
+
+        # PLOT RIVERS
+        if rivers:
+            for river in self.rivers:
+                for i in range(len(river) - 1):
+                    beg_x, beg_y = river[i]
+                    end_x, end_y = river[i + 1]
+                    X = (beg_x, end_x)
+                    Y = (beg_y, end_y)
+                    plt.plot(X, Y, linewidth=5, color='royalblue')
 
         ax.set_xlim(0, 1)
         ax.set_ylim(0, 1)
@@ -332,30 +359,35 @@ class Graph:
 
         for corner in self.corners:
             if corner.terrain_type == TerrainType.LAND:
-                neighbors_heights = [n.height for n in corner.adjacent]
+                neighbors_heights = [nei.height for nei in corner.adjacent]
                 lowest = min(neighbors_heights)
                 lowest_id = neighbors_heights.index(lowest)
                 corner.downslope = lowest_id
 
         good_beginnings = [
-            i for i, c in enumerate(self.corners)
-            if c.terrain_type == TerrainType.LAND and c.height >= min_height
+            c for c in self.corners
+            if (c.terrain_type == TerrainType.LAND or c.terrain_type == TerrainType.COAST) \
+                and c.height >= min_height
         ]
 
-        if len(good_beginnings) == 0:
-            heighest = max([c.height for c in self.corners])
-            print(f'min_height={min_height} was to big. Heighest height={heighest}')
+        if len(good_beginnings) < n:
+            heighest = max([
+                c.height for c in self.corners 
+                if c.terrain_type == TerrainType.LAND or c.terrain_type == TerrainType.COAST
+            ])
+            print(f'Found only {len(good_beginnings)} river beginnings. Lower min_height.')
+            print(f'min_height={min_height} | Heighest mountain has height={heighest}')
             return
 
-        for i in range(n):
-            random_corner: int = np.random.choice(good_beginnings)
+        start_corners = np.random.choice(good_beginnings, n, replace=False)
+        for corner in start_corners:
             new_river = []
 
-            while random_corner is not None:
-                if random_corner in new_river:
+            while True:
+                new_river.append(corner.get_cords())
+                if corner.downslope in new_river or corner.downslope is None:
                     break
-                new_river.append(random_corner)
-                random_corner = self.corners[random_corner].downslope
+                corner = corner.adjacent[corner.downslope]
 
             self.rivers.append(new_river)
 
