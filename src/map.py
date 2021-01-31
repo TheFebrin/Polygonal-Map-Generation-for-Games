@@ -90,7 +90,7 @@ class Graph:
         edges = {}
         for c1, neighbours_list in enumerate(self._neighbors):
             for i, c2 in enumerate(neighbours_list):
-                if (c1, c2) in edges:
+                if (c1, c2) in edges or (c2, c1) in edges:
                     continue
 
                 cor1, cor2 = self._intersecions[c1][i]
