@@ -55,6 +55,7 @@ class Edge:
         self.d1 = center2
         self.v0 = corner1
         self.v1 = corner2
+        self.river = 0
 
     def is_edge_to_map_end(self):
         """
@@ -66,17 +67,13 @@ class Edge:
 
 class Graph:
     def __init__(self, N: int = 25, iterations: int = 2):
-        """
-
-        :atribute rivers: List of rivers, where a river is a list of cords
-        """
         voronoi_polygons = VoronoiPolygons(N=N)
         self._points, self._centroids, self._vertices, self._regions, \
             self._neighbors, self._intersecions \
             = voronoi_polygons.generate_Voronoi(iterations=iterations)
 
-        self.centers, self.corners, self.edges = self.initialize_graph()
-        self.rivers = []  # type: List[List[Tuple[int, int]]]
+        self.centers, self.corners, self.edges, self.corners_to_edge = self.initialize_graph()
+        # Notice that corners_to_edge.values() and edges are the same objects
 
     def initialize_graph(self):
         # creating center object for each point
@@ -125,9 +122,24 @@ class Graph:
                 edges[(c1, c2)] = edge
 
         corners = [corner for i, corner in enumerate(corners) if corners_inside[i]]
-        edges = list(edges.values())
+        edges_values = list(edges.values())
 
-        return centers, corners, edges
+        return centers, corners, edges_values, edges
+
+    def find_edge_using_corners(self, c1: Corner, c2: Corner) -> Edge:
+        """
+        Finds Edge object represented by the given corners.
+        """
+        def same_corner(c1, c2):
+            return c1.x == c2.x and c1.y == c2.y
+
+        for edge in self.edges:
+            if (same_corner(edge.v0, c1) and same_corner(edge.v1, c2)) \
+                or (same_corner(edge.v0, c2) and same_corner(edge.v1, c1)):
+                return edge
+
+        raise ValueError('Edge with given corners doesnt exist.')
+
 
     def plot_map(self):
         plt.figure(figsize=(10,10))
@@ -185,13 +197,14 @@ class Graph:
 
         # PLOT RIVERS
         if rivers:
-            for river in self.rivers:
-                for i in range(len(river) - 1):
-                    beg_x, beg_y = river[i]
-                    end_x, end_y = river[i + 1]
+            for edge in self.edges:
+                if edge.river > 0:
+                    beg_x, beg_y = edge.v0.get_cords()
+                    end_x, end_y = edge.v1.get_cords()
                     X = (beg_x, end_x)
                     Y = (beg_y, end_y)
-                    plt.plot(X, Y, linewidth=5, color='royalblue')
+                    plt.plot(X, Y, linewidth=4 + edge.river, color='royalblue')
+                   
 
         ax.set_xlim(0, 1)
         ax.set_ylim(0, 1)
@@ -351,12 +364,31 @@ class Graph:
 
         This function creates `n` rivers. It draws a random start position for
         each river that is >= min_height.
+        Rivers are saved in Edge.
 
         :param n: number of rivers
         :param min_height: minimum height of the begining of the river
         """
-        self.rivers = []  # type: List[List[int]]
 
+        # reset previous rivers
+        for edge in self.edges:
+            edge.river = 0
+
+        def suitable_for_river(c: Corner):
+            good_tile = c.terrain_type == TerrainType.LAND or c.terrain_type == TerrainType.COAST
+            neighbour_tiles = [nei.terrain_type for nei in c.adjacent]
+            good_neighbours = [
+                nt == TerrainType.LAND or nt == TerrainType.COAST
+                for nt in neighbour_tiles
+            ]
+            touches_tiles = [center.terrain_type for center in c.touches]
+            good_touches = [
+                tt == TerrainType.LAND or tt == TerrainType.COAST
+                for tt in touches_tiles
+            ]
+
+            return good_tile and all(good_neighbours) and all(good_touches)
+  
         for corner in self.corners:
             if corner.terrain_type == TerrainType.LAND:
                 neighbors_heights = [nei.height for nei in corner.adjacent]
@@ -381,15 +413,19 @@ class Graph:
 
         start_corners = np.random.choice(good_beginnings, n, replace=False)
         for corner in start_corners:
-            new_river = []
-
             while True:
-                new_river.append(corner.get_cords())
-                if corner.downslope in new_river or corner.downslope is None:
+                if corner.downslope is None or not suitable_for_river(corner):
                     break
-                corner = corner.adjacent[corner.downslope]
+                
+                next_corner = corner.adjacent[corner.downslope]
+                if next_corner.terrain_type != TerrainType.LAND and next_corner.terrain_type != TerrainType.COAST:
+                    break
 
-            self.rivers.append(new_river)
+                mutable_edge = self.find_edge_using_corners(corner, next_corner)
+
+                # Notice that this line will modify this object in self.edges
+                mutable_edge.river += 1
+                corner = next_corner
 
 
 if __name__ == '__main__':
