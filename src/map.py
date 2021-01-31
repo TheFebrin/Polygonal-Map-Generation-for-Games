@@ -3,6 +3,7 @@ import queue
 import numpy as np
 import math
 import matplotlib.pyplot as plt
+from typing import *
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 from scipy.spatial import ConvexHull
@@ -22,9 +23,19 @@ class Center:
         self.terrain_type = TerrainType.LAND
         self.height = 0
 
-
 class Corner:
     def __init__(self, x, y):
+        """
+        :param x:
+        :param y:
+        :param:
+        :param:
+        :param:
+        :param:
+        :param:
+        :param height: height of the corner
+        :param downslope: index of the adjacent corner with the lowest height
+        """
         self.x = x
         self.y = y
         self.touches = []
@@ -32,6 +43,10 @@ class Corner:
         self.adjacent = []
         self.terrain_type = TerrainType.LAND
         self.height = 0
+        self.downslope = None
+
+    def get_cords(self) -> Tuple[float, float]:
+        return self.x, self.y
 
 
 class Edge:
@@ -40,7 +55,8 @@ class Edge:
         self.d1 = center2
         self.v0 = corner1
         self.v1 = corner2
-    
+        self.river = 0
+
     def is_edge_to_map_end(self):
         """
         Function defining, whether the edge is connected to the end of the map.
@@ -56,7 +72,8 @@ class Graph:
             self._neighbors, self._intersecions \
             = voronoi_polygons.generate_Voronoi(iterations=iterations)
 
-        self.centers, self.corners, self.edges = self.initialize_graph()
+        self.centers, self.corners, self.edges, self.corners_to_edge = self.initialize_graph()
+        # Notice that corners_to_edge.values() and edges are the same objects
 
     def initialize_graph(self):
         # creating center object for each point
@@ -72,10 +89,10 @@ class Graph:
             corners.append(corner)
 
         corners_inside = [
-                (0 <= corner.x <= 1) and 
-                (0 <= corner.y <= 1) and 
-                ((0 != corner.x and 1 != corner.x) or 
-                (0 != corner.y and 1 != corner.y)) 
+                (0 <= corner.x <= 1) and
+                (0 <= corner.y <= 1) and
+                ((0 != corner.x and 1 != corner.x) or
+                (0 != corner.y and 1 != corner.y))
             for corner in corners]
 
         # setting neighbors and corners lists for each center
@@ -104,20 +121,35 @@ class Graph:
 
                 edges[(c1, c2)] = edge
 
-        corners = [corner for i,corner in enumerate(corners) if corners_inside[i]]
-        edges = list(edges.values())
+        corners = [corner for i, corner in enumerate(corners) if corners_inside[i]]
+        edges_values = list(edges.values())
 
-        return centers, corners, edges
+        return centers, corners, edges_values, edges
+
+    def find_edge_using_corners(self, c1: Corner, c2: Corner) -> Edge:
+        """
+        Finds Edge object represented by the given corners.
+        """
+        def same_corner(c1, c2):
+            return c1.x == c2.x and c1.y == c2.y
+
+        for edge in self.edges:
+            if (same_corner(edge.v0, c1) and same_corner(edge.v1, c2)) \
+                or (same_corner(edge.v0, c2) and same_corner(edge.v1, c1)):
+                return edge
+
+        raise ValueError('Edge with given corners doesnt exist.')
+
 
     def plot_map(self):
         plt.figure(figsize=(10,10))
         plt.rcParams['axes.facecolor'] = 'grey'
-        
+
         plt.scatter(
-            [center.x for center in self.centers], 
+            [center.x for center in self.centers],
             [center.y for center in self.centers], c='red')
         plt.scatter(
-            [corner.x for corner in self.corners], 
+            [corner.x for corner in self.corners],
             [corner.y for corner in self.corners], c='blue')
         for edge in self.edges:
             plt.plot([edge.v0.x, edge.v1.x], [edge.v0.y, edge.v1.y], c='white')
@@ -126,39 +158,75 @@ class Graph:
         plt.xlim(0,1)
         plt.ylim(0,1)
         plt.show()
-    
-    def plot_map_with_terrain_types(self, debug_height = False):
+
+    def plot_full_map(
+        self, 
+        debug_height=False, 
+        downslope_arrows=False,
+        rivers=True,
+    ):
+        """
+        Here the next adjustments will be added to create a complete map.
+        """
         fig, ax = plt.subplots(figsize=(10, 10))
-        
+
         polygons = [self._center_to_polygon(center) for center in self.centers]
         p = PatchCollection(polygons, match_original=True)
         ax.add_collection(p)
+
+        # PLOT HEIGHT LABELS
         if debug_height:
-#             for center in self.centers:
-#                 if center.terrain_type == TerrainType.LAND:
-#                     plt.annotate(f"{round(center.height, 1)}", (center.x, center.y), color = 'white', 
-#                                 backgroundcolor = 'black')
             for corner in self.corners:
-                plt.annotate(f"{round(corner.height, 1)}", (corner.x, corner.y), color = 'white', 
-                            backgroundcolor = 'black')
+                plt.annotate(
+                    f"{round(corner.height, 1)}", (corner.x, corner.y), 
+                    color='white', backgroundcolor='black'
+                )
+
+        def drawArrow(A, B, color='darkblue'):
+            plt.arrow(
+                A[0], A[1], B[0] - A[0], B[1] - A[1],
+                head_width=0.015, length_includes_head=True, color=color
+            )
+
+        # PLOT DOWNSLOPE ARROWS
+        if downslope_arrows:
+            for corner in self.corners:
+                if corner.downslope is not None:
+                    adjacent = corner.adjacent[corner.downslope]
+                    drawArrow(A=corner.get_cords(), B=adjacent.get_cords())
+
+        # PLOT RIVERS
+        if rivers:
+            for edge in self.edges:
+                if edge.river > 0:
+                    beg_x, beg_y = edge.v0.get_cords()
+                    end_x, end_y = edge.v1.get_cords()
+                    X = (beg_x, end_x)
+                    Y = (beg_y, end_y)
+                    plt.plot(X, Y, linewidth=4 + edge.river, color='royalblue')
+                   
+
         ax.set_xlim(0, 1)
         ax.set_ylim(0, 1)
         plt.show()
-        
+
     def plot_3d_height_map(self):
-        """Function for plotting terrain height (based on the height of the corners), as a plotly wireframe"""
+        """
+        Function for plotting terrain height
+        (based on the height of the corners), as a plotly wireframe
+        """
         lines = []
         line_marker = dict(color='#0066FF', width=2)
-        
+
         for e in self.edges:
             lines.append(go.Scatter3d(
                 x=np.array([e.v0.x, e.v1.x]),
                 y=np.array([e.v0.y, e.v1.y]),
                 z=np.array([e.v0.height, e.v1.height]),
-                mode='lines', 
+                mode='lines',
                 line=line_marker,
             ))
-            
+
         layout = go.Layout(
             title='Height Map',
             scene=dict(
@@ -188,11 +256,11 @@ class Graph:
             ),
             showlegend=False,
         )
-        
+
         fig = go.Figure(data=lines, layout=layout)
         fig.show()
-    
-    
+
+
     def _center_to_polygon(self, center):
         """
         Helper function for plotting, which takes the center and returns a polygon which can be plotted.
@@ -217,7 +285,7 @@ class Graph:
         vertices = np.append(vertices, vertices[0])
         xs, ys = corner_coordinates[vertices, 0], corner_coordinates[vertices, 1]
         return Polygon(np.c_[xs, ys], facecolor=color, edgecolor='black', linewidth=2)
-    
+
     def _is_center_a_map_corner(self, center):
         """
         Function returns True only when a center is in a one of 4 corners of the [0, 1]^2.
@@ -225,7 +293,7 @@ class Graph:
         corner_coordinates = np.array([[corner.x, corner.y] for corner in center.corners])
         xs, ys = corner_coordinates.T
         return (np.any(xs == 0) or np.any(xs == 1)) and (np.any(ys == 0) or np.any(ys == 1))
-    
+
     def _nearest_map_corner(self, corner_coordinates):
         """
         Assumes that a coordinates belong to the corner being in the corner of the map.
@@ -241,14 +309,16 @@ class Graph:
             else:
                 return [1, 1]
             
-    def assign_corner_elevations(self, borders = None):
+    def assign_corner_elevations(self, borders=None):
         '''
         Runs BFS from every border corner to calculate height of every corner. 
         '''
         for corner in self.corners:
             corner.height = float('inf')
-        border_corners = [corner for corner in self.corners if corner.x == 0 or corner.x == 1 or corner.y == 0
-                         or corner.y == 1]
+        border_corners = [
+            corner for corner in self.corners 
+            if corner.x == 0 or corner.x == 1 or corner.y == 0 or corner.y == 1
+        ]
         for border in border_corners:
             q = queue.Queue()
             border.height = 0
@@ -286,6 +356,77 @@ class Graph:
             x = math.sqrt(scale_factor) - math.sqrt(scale_factor * (1 - y))
             corner.height = x
         
+    def create_rivers(self, n, min_height):
+        """
+        Rivers flow from high elevations down to the coast.
+        Having elevations that always increase away from the coast means
+        that there’s no local minima that complicate river generation
+
+        This function creates `n` rivers. It draws a random start position for
+        each river that is >= min_height.
+        Rivers are saved in Edge.
+
+        :param n: number of rivers
+        :param min_height: minimum height of the begining of the river
+        """
+
+        # reset previous rivers
+        for edge in self.edges:
+            edge.river = 0
+
+        def suitable_for_river(c: Corner):
+            good_tile = c.terrain_type == TerrainType.LAND or c.terrain_type == TerrainType.COAST
+            neighbour_tiles = [nei.terrain_type for nei in c.adjacent]
+            good_neighbours = [
+                nt == TerrainType.LAND or nt == TerrainType.COAST
+                for nt in neighbour_tiles
+            ]
+            touches_tiles = [center.terrain_type for center in c.touches]
+            good_touches = [
+                tt == TerrainType.LAND or tt == TerrainType.COAST
+                for tt in touches_tiles
+            ]
+
+            return good_tile and all(good_neighbours) and all(good_touches)
+  
+        for corner in self.corners:
+            if corner.terrain_type == TerrainType.LAND:
+                neighbors_heights = [nei.height for nei in corner.adjacent]
+                lowest = min(neighbors_heights)
+                lowest_id = neighbors_heights.index(lowest)
+                corner.downslope = lowest_id
+
+        good_beginnings = [
+            c for c in self.corners
+            if (c.terrain_type == TerrainType.LAND or c.terrain_type == TerrainType.COAST) \
+                and c.height >= min_height
+        ]
+
+        if len(good_beginnings) < n:
+            heighest = max([
+                c.height for c in self.corners 
+                if c.terrain_type == TerrainType.LAND or c.terrain_type == TerrainType.COAST
+            ])
+            print(f'Found only {len(good_beginnings)} river beginnings. Lower min_height.')
+            print(f'min_height={min_height} | Heighest mountain has height={heighest}')
+            return
+
+        start_corners = np.random.choice(good_beginnings, n, replace=False)
+        for corner in start_corners:
+            while True:
+                if corner.downslope is None or not suitable_for_river(corner):
+                    break
+                
+                next_corner = corner.adjacent[corner.downslope]
+                if next_corner.terrain_type != TerrainType.LAND and next_corner.terrain_type != TerrainType.COAST:
+                    break
+
+                mutable_edge = self.find_edge_using_corners(corner, next_corner)
+
+                # Notice that this line will modify this object in self.edges
+                mutable_edge.river += 1
+                corner = next_corner
+
 
 if __name__ == '__main__':
     g = Graph(N=25, iterations=2)
