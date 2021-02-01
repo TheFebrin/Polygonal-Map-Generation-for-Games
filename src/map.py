@@ -10,7 +10,7 @@ from matplotlib.collections import PatchCollection
 from scipy.spatial import ConvexHull
 import plotly.graph_objs as go
 
-from src.terrain import TerrainType
+from src.terrain import TerrainType, BiomeType
 from src.voronoi import VoronoiPolygons
 
 
@@ -22,6 +22,7 @@ class Center:
         self.borders = []
         self.corners = []
         self.terrain_type = TerrainType.LAND
+        self.biome = BiomeType.OCEAN
         self.height = 0
         self.moisture = 0
 
@@ -313,6 +314,30 @@ class Graph:
         else:
             raise AttributeError(f'Unexpected terrain type: {center.terrain_type}')
         return color
+    
+    def _center_to_biome_color(self, center):
+        if center.biome == BiomeType.OCEAN: color = 'deepskyblue'
+        elif center.biome == BiomeType.LAKE: color = 'royalblue'
+        elif center.biome == BiomeType.COAST: color = 'khaki'
+        elif center.biome == BiomeType.SNOW: color = (248/255, 248/255, 248/255)
+        elif center.biome == BiomeType.TUNDRA: color = (227/255, 228/255, 224/255)
+        elif center.biome == BiomeType.BARE: color = (200/255, 198/255, 195/255)
+        elif center.biome == BiomeType.SCORCHED: color = (123/255, 123/255, 123/255)
+        elif center.biome == BiomeType.TAIGA: color = (173/255, 190/255, 167/255)
+        elif center.biome == BiomeType.SHRUBLAND: color = (173/255, 182/255, 165/255)
+        elif center.biome == BiomeType.TEMPERATE_DESERT: color = (208/255, 203/255, 165/255)
+        elif center.biome == BiomeType.TEMPERATE_RAIN_FOREST: color = (55/255, 111/255, 44/255)
+        elif center.biome == BiomeType.TEMPERATE_DECIDOUS_FOREST: color = (123/255, 164/255, 91/255)
+        elif center.biome == BiomeType.GRASSLAND: color = (160/255, 195/255, 121/255)
+        elif center.biome == BiomeType.TROPICAL_RAIN_FOREST: color = (32/255, 78/255, 23/255)
+        elif center.biome == BiomeType.TROPICAL_SEASONAL_FOREST: color = (91/255, 124/255, 64/255)
+        elif center.biome == BiomeType.SUBTROPICAL_DESERT: color = (237/255, 226/255, 142/255)
+        elif center.biome == BiomeType.MARSH: color = 'darkseagreen'
+        elif center.biome == BiomeType.ICE: color = 'lightcyan'
+        elif center.biome == BiomeType.DEEPOCEAN: color = 'dodgerblue'
+        else:
+            raise AttributeError(f'Unexpected biome type: {center.biome}')
+        return color
         
     def _center_to_polygon(self, center, plot_type):
         """
@@ -324,6 +349,8 @@ class Graph:
             color = self._center_to_moisture_color(center)
         elif plot_type == 'height':
             color = self._center_to_height_color(center)
+        elif plot_type == 'biome':
+            color = self._center_to_biome_color(center)
         else:
             raise AttributeError(f'Unexpected plot type: {plot_type}')
         
@@ -396,9 +423,10 @@ class Graph:
         '''
         for center in self.centers:
             corners_heights = [corner.height for corner in center.corners]
-            center.height = sum(corners_heights) / len(corners_heights)
             if center.terrain_type == TerrainType.LAKE:
-                center.height -= 1
+                center.height = min(corners_heights)
+            else:
+                center.height = sum(corners_heights) / len(corners_heights)
             
     def redistribute_elevations(self, scale_factor = 1.1):
         sorted_corners = sorted(self.corners, key = lambda c: c.height)
@@ -530,7 +558,59 @@ class Graph:
                 
         if redistribute:
             self.redistribute_moisture()
-
+            
+    def assign_biomes(self):
+        for center in self.centers:
+            if center.terrain_type == TerrainType.COAST:
+                center.biome = BiomeType.COAST
+            elif center.terrain_type == TerrainType.OCEAN:
+                if any([n.terrain_type == TerrainType.COAST for n in center.neighbors]):
+                    center.biome = BiomeType.OCEAN
+                else:
+                    center.biome = BiomeType.DEEPOCEAN
+            elif center.terrain_type == TerrainType.LAKE:
+                if center.height < 0.2:
+                    center.biome = BiomeType.MARSH
+                elif center.height > 0.8:
+                    center.biome = BiomeType.ICE
+                else:
+                    center.biome = BiomeType.LAKE
+            else:
+                if center.height > 0.85:
+                    if center.moisture > 0.5:
+                        center.biome = BiomeType.SNOW
+                    elif center.moisture > 0.33:
+                        center.biome = BiomeType.TUNDRA
+                    elif center.moisture > 0.16:
+                        center.biome = BiomeType.BARE
+                    else:
+                        center.biome = BiomeType.SCORCHED
+                elif center.height > 0.65:
+                    if center.moisture > 0.66:
+                        center.biome = BiomeType.TAIGA
+                    elif center.moisture > 0.33:
+                        center.biome = BiomeType.SHRUBLAND
+                    else:
+                        center.biome = BiomeType.TEMPERATE_DESERT
+                elif center.height > 0.35:
+                    if center.moisture > 0.83:
+                        center.biome = BiomeType.TEMPERATE_RAIN_FOREST
+                    elif center.moisture > 0.50:
+                        center.biome = BiomeType.TEMPERATE_DECIDOUS_FOREST
+                    elif center.moisture > 0.16:
+                        center.biome = BiomeType.GRASSLAND
+                    else:
+                        center.biome = BiomeType.TEMPERATE_DESERT
+                else:
+                    if center.moisture > 0.66:
+                        center.biome = BiomeType.TROPICAL_RAIN_FOREST
+                    elif center.moisture > 0.33:
+                        center.biome = BiomeType.TROPICAL_SEASONAL_FOREST
+                    elif center.moisture > 0.16:
+                        center.biome = BiomeType.GRASSLAND
+                    else:
+                        center.biome = BiomeType.SUBTROPICAL_DESERT
+    
 
 if __name__ == '__main__':
     g = Graph(N=25, iterations=2)
