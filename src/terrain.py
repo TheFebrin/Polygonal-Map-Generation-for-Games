@@ -9,6 +9,26 @@ class TerrainType(Enum):
     LAKE = 3
     COAST = 4
 
+class BiomeType(Enum):
+    OCEAN = 1
+    LAKE = 2
+    COAST = 3
+    SNOW = 4
+    TUNDRA = 5
+    BARE = 6
+    SCORCHED = 7
+    TAIGA = 8
+    SHRUBLAND = 9
+    TEMPERATE_DESERT = 10
+    TEMPERATE_RAIN_FOREST = 11
+    TEMPERATE_DECIDOUS_FOREST = 12
+    GRASSLAND = 13
+    TROPICAL_RAIN_FOREST = 14
+    TROPICAL_SEASONAL_FOREST = 15
+    SUBTROPICAL_DESERT = 16
+    MARSH = 17
+    ICE = 18
+    DEEPOCEAN = 19
 
 # Minimum ratio of the water edges to the total, in order to center become a water.
 MIN_WATER_EDGES_RATIO_TO_BE_WATER_CENTER = 0.25
