@@ -3,13 +3,14 @@ import queue
 import numpy as np
 import math
 import matplotlib.pyplot as plt
+import matplotlib
 from typing import *
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 from scipy.spatial import ConvexHull
 import plotly.graph_objs as go
 
-from src.terrain import TerrainType, lighten_color
+from src.terrain import TerrainType
 from src.voronoi import VoronoiPolygons
 
 
@@ -22,6 +23,7 @@ class Center:
         self.corners = []
         self.terrain_type = TerrainType.LAND
         self.height = 0
+        self.moisture = 0
 
 class Corner:
     def __init__(self, x, y):
@@ -35,6 +37,8 @@ class Corner:
         :param:
         :param height: height of the corner
         :param downslope: index of the adjacent corner with the lowest height
+        :param:
+        :param:
         """
         self.x = x
         self.y = y
@@ -44,6 +48,8 @@ class Corner:
         self.terrain_type = TerrainType.LAND
         self.height = 0
         self.downslope = None
+        self.river = 0
+        self.moisture = 0
 
     def get_cords(self) -> Tuple[float, float]:
         return self.x, self.y
@@ -161,7 +167,9 @@ class Graph:
 
     def plot_full_map(
         self, 
-        debug_height=False, 
+        plot_type='terrain',
+        debug_height=False,
+        debug_moisture=False,
         downslope_arrows=False,
         rivers=True,
     ):
@@ -170,7 +178,7 @@ class Graph:
         """
         fig, ax = plt.subplots(figsize=(10, 10))
 
-        polygons = [self._center_to_polygon(center) for center in self.centers]
+        polygons = [self._center_to_polygon(center, plot_type) for center in self.centers]
         p = PatchCollection(polygons, match_original=True)
         ax.add_collection(p)
 
@@ -179,6 +187,14 @@ class Graph:
             for corner in self.corners:
                 plt.annotate(
                     f"{round(corner.height, 1)}", (corner.x, corner.y), 
+                    color='white', backgroundcolor='black'
+                )
+        
+        # PLOT MOISTURE LABELS
+        if debug_moisture:
+            for center in self.centers:
+                plt.annotate(
+                    f"{round(center.moisture, 1)}", (center.x, center.y), 
                     color='white', backgroundcolor='black'
                 )
 
@@ -203,9 +219,8 @@ class Graph:
                     end_x, end_y = edge.v1.get_cords()
                     X = (beg_x, end_x)
                     Y = (beg_y, end_y)
-                    plt.plot(X, Y, linewidth=4 + edge.river, color='royalblue')
-                   
-
+                    plt.plot(X, Y, linewidth=2+2*np.sqrt(edge.river), color='blue')
+                    
         ax.set_xlim(0, 1)
         ax.set_ylim(0, 1)
         plt.show()
@@ -261,21 +276,57 @@ class Graph:
         fig.show()
 
 
-    def _center_to_polygon(self, center):
+    def _center_to_terrain_color(self, center):
+        if center.terrain_type is TerrainType.LAND:
+            cmap = matplotlib.cm.get_cmap('Greens')
+            color = cmap(1.0 - center.height)
+        elif center.terrain_type is TerrainType.OCEAN:
+            color = 'deepskyblue'
+        elif center.terrain_type is TerrainType.COAST:
+            color = 'khaki'
+        elif center.terrain_type is TerrainType.LAKE:
+            color = 'royalblue'
+        else:
+            raise AttributeError(f'Unexpected terrain type: {center.terrain_type}')
+        return color
+    
+    def _center_to_height_color(self, center):
+        if center.terrain_type is TerrainType.LAND or center.terrain_type is TerrainType.COAST:
+            cmap = matplotlib.cm.get_cmap('Greens')
+            color = cmap(1.0 - center.height)
+        elif center.terrain_type is TerrainType.OCEAN:
+            color = 'deepskyblue'
+        elif center.terrain_type is TerrainType.LAKE:
+            color = 'royalblue'
+        else:
+            raise AttributeError(f'Unexpected terrain type: {center.terrain_type}')
+        return color
+    
+    def _center_to_moisture_color(self, center):
+        if center.terrain_type is TerrainType.LAND or center.terrain_type is TerrainType.COAST:
+            cmap = matplotlib.cm.get_cmap('YlGn')
+            color = cmap(center.moisture)
+        elif center.terrain_type is TerrainType.OCEAN:
+            color = 'deepskyblue'
+        elif center.terrain_type is TerrainType.LAKE:
+            color = 'royalblue'
+        else:
+            raise AttributeError(f'Unexpected terrain type: {center.terrain_type}')
+        return color
+        
+    def _center_to_polygon(self, center, plot_type):
         """
         Helper function for plotting, which takes the center and returns a polygon which can be plotted.
         """
-        if center.terrain_type is TerrainType.LAND:
-            color = lighten_color('green', amount = 1 + center.height)
-        elif center.terrain_type is TerrainType.OCEAN:
-            color = 'blue'
-        elif center.terrain_type is TerrainType.COAST:
-            color = 'yellow'
-        elif center.terrain_type is TerrainType.LAKE:
-            color = 'lightblue'
+        if plot_type == 'terrain':
+            color = self._center_to_terrain_color(center)
+        elif plot_type == 'moisture':
+            color = self._center_to_moisture_color(center)
+        elif plot_type == 'height':
+            color = self._center_to_height_color(center)
         else:
-            raise AttributeError(f'Unexpected terrain type: {center.terrain_type}')
-
+            raise AttributeError(f'Unexpected plot type: {plot_type}')
+        
         corner_coordinates = np.array([[corner.x, corner.y] for corner in center.corners])
         if self._is_center_a_map_corner(center):
             corner_coordinates = np.append(corner_coordinates, self._nearest_map_corner(corner_coordinates))
@@ -355,6 +406,12 @@ class Graph:
             y = i / len(sorted_corners)
             x = math.sqrt(scale_factor) - math.sqrt(scale_factor * (1 - y))
             corner.height = x
+            
+    def _assign_corner_river(self):
+        for edge in self.edges:
+            if edge.river > 0:
+                edge.v0.river = max(edge.v0.river, edge.river)
+                edge.v1.river = max(edge.v0.river, edge.river)
         
     def create_rivers(self, n, min_height):
         """
@@ -390,7 +447,7 @@ class Graph:
             return good_tile and all(good_neighbours) and all(good_touches)
   
         for corner in self.corners:
-            if corner.terrain_type == TerrainType.LAND:
+            if corner.terrain_type == TerrainType.LAND or corner.terrain_type == TerrainType.COAST:
                 neighbors_heights = [nei.height for nei in corner.adjacent]
                 lowest = min(neighbors_heights)
                 lowest_id = neighbors_heights.index(lowest)
@@ -426,6 +483,53 @@ class Graph:
                 # Notice that this line will modify this object in self.edges
                 mutable_edge.river += 1
                 corner = next_corner
+                
+        self._assign_corner_river()
+        
+    def _assign_corner_moisture(self, distance_decay, river_weight, lake_value, ocean_value):
+    
+        q = queue.Queue()
+        for corner in self.corners:
+            if corner.river > 0:
+                corner.moisture = max(1.0, min(3.0, river_weight*corner.river))
+            if any([center.terrain_type == TerrainType.LAKE for center in corner.touches]):
+                corner.moisture = max(lake_value, corner.moisture)
+            if corner.moisture > 0:
+                q.put(corner)
+
+        while not q.empty():
+            corner = q.get()
+
+            new_moisture = distance_decay*corner.moisture
+            for nei_corner in corner.adjacent:
+                if new_moisture > nei_corner.moisture:
+                    nei_corner.moisture = new_moisture
+                    q.put(nei_corner)
+
+        for corner in self.corners:
+            if any([center.terrain_type == TerrainType.OCEAN for center in corner.touches]):
+                corner.moisture = max(ocean_value, corner.moisture)
+    
+    def redistribute_moisture(self):
+        sorted_centers = sorted(self.centers, key = lambda c: c.moisture)
+        for i, center in enumerate(sorted_centers):
+            center.moisture = i / (len(sorted_centers)-1)
+    
+    def assign_moisture(self, 
+        redistribute=True,
+        distance_decay=0.9, 
+        river_weight=0.25,
+        lake_value=1.0,
+        ocean_value=1.0,
+        ):
+        self._assign_corner_moisture(distance_decay, river_weight, lake_value, ocean_value)
+        
+        for center in self.centers:
+            if center.terrain_type == TerrainType.LAND or center.terrain_type == TerrainType.COAST:
+                center.moisture = np.mean(np.array([min(1.0, corner.moisture) for corner in center.corners]))
+                
+        if redistribute:
+            self.redistribute_moisture()
 
 
 if __name__ == '__main__':
