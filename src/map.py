@@ -323,15 +323,15 @@ class Graph:
         elif center.biome == BiomeType.TUNDRA: color = (227/255, 228/255, 224/255)
         elif center.biome == BiomeType.BARE: color = (200/255, 198/255, 195/255)
         elif center.biome == BiomeType.SCORCHED: color = (123/255, 123/255, 123/255)
-        elif center.biome == BiomeType.TAIGA: color = (173/255, 190/255, 167/255)
-        elif center.biome == BiomeType.SHRUBLAND: color = (173/255, 182/255, 165/255)
+        elif center.biome == BiomeType.TAIGA: color = (188/255, 214/255, 144/255)
+        elif center.biome == BiomeType.SHRUBLAND: color = (211/255, 224/255, 150/255)
         elif center.biome == BiomeType.TEMPERATE_DESERT: color = (208/255, 203/255, 165/255)
         elif center.biome == BiomeType.TEMPERATE_RAIN_FOREST: color = (55/255, 111/255, 44/255)
         elif center.biome == BiomeType.TEMPERATE_DECIDOUS_FOREST: color = (123/255, 164/255, 91/255)
         elif center.biome == BiomeType.GRASSLAND: color = (160/255, 195/255, 121/255)
         elif center.biome == BiomeType.TROPICAL_RAIN_FOREST: color = (32/255, 78/255, 23/255)
         elif center.biome == BiomeType.TROPICAL_SEASONAL_FOREST: color = (91/255, 124/255, 64/255)
-        elif center.biome == BiomeType.SUBTROPICAL_DESERT: color = (237/255, 226/255, 142/255)
+        elif center.biome == BiomeType.SUBTROPICAL_DESERT: color = (230/255, 225/255, 168/255)
         elif center.biome == BiomeType.MARSH: color = 'darkseagreen'
         elif center.biome == BiomeType.ICE: color = 'lightcyan'
         elif center.biome == BiomeType.DEEPOCEAN: color = 'dodgerblue'
@@ -473,7 +473,7 @@ class Graph:
             ]
 
             return good_tile and all(good_neighbours) and all(good_touches)
-  
+        
         for corner in self.corners:
             if corner.terrain_type == TerrainType.LAND or corner.terrain_type == TerrainType.COAST:
                 neighbors_heights = [nei.height for nei in corner.adjacent]
@@ -483,8 +483,10 @@ class Graph:
 
         good_beginnings = [
             c for c in self.corners
-            if (c.terrain_type == TerrainType.LAND or c.terrain_type == TerrainType.COAST) \
-                and c.height >= min_height
+            if ((c.terrain_type == TerrainType.LAND or c.terrain_type == TerrainType.COAST) \
+                and c.height >= min_height) \
+               or (any([cent.terrain_type == TerrainType.LAKE for cent in c.touches]) \
+                and c.terrain_type != TerrainType.LAKE)
         ]
 
         if len(good_beginnings) < n:
@@ -569,44 +571,44 @@ class Graph:
                 else:
                     center.biome = BiomeType.DEEPOCEAN
             elif center.terrain_type == TerrainType.LAKE:
-                if center.height < 0.2:
+                if center.height < 0.3:
                     center.biome = BiomeType.MARSH
-                elif center.height > 0.8:
+                elif center.height > 0.9:
                     center.biome = BiomeType.ICE
                 else:
                     center.biome = BiomeType.LAKE
             else:
-                if center.height > 0.85:
-                    if center.moisture > 0.5:
+                if center.height > 0.87:
+                    if center.moisture > 0.66:
                         center.biome = BiomeType.SNOW
-                    elif center.moisture > 0.33:
+                    elif center.moisture > 0.44:
                         center.biome = BiomeType.TUNDRA
-                    elif center.moisture > 0.16:
+                    elif center.moisture > 0.22:
                         center.biome = BiomeType.BARE
                     else:
                         center.biome = BiomeType.SCORCHED
-                elif center.height > 0.65:
+                elif center.height > 0.66:
                     if center.moisture > 0.66:
                         center.biome = BiomeType.TAIGA
                     elif center.moisture > 0.33:
                         center.biome = BiomeType.SHRUBLAND
                     else:
                         center.biome = BiomeType.TEMPERATE_DESERT
-                elif center.height > 0.35:
-                    if center.moisture > 0.83:
+                elif center.height > 0.4:
+                    if center.moisture > 0.8:
                         center.biome = BiomeType.TEMPERATE_RAIN_FOREST
-                    elif center.moisture > 0.50:
+                    elif center.moisture > 0.6:
                         center.biome = BiomeType.TEMPERATE_DECIDOUS_FOREST
-                    elif center.moisture > 0.16:
+                    elif center.moisture > 0.3:
                         center.biome = BiomeType.GRASSLAND
                     else:
                         center.biome = BiomeType.TEMPERATE_DESERT
                 else:
                     if center.moisture > 0.66:
                         center.biome = BiomeType.TROPICAL_RAIN_FOREST
-                    elif center.moisture > 0.33:
+                    elif center.moisture > 0.45:
                         center.biome = BiomeType.TROPICAL_SEASONAL_FOREST
-                    elif center.moisture > 0.16:
+                    elif center.moisture > 0.3:
                         center.biome = BiomeType.GRASSLAND
                     else:
                         center.biome = BiomeType.SUBTROPICAL_DESERT
