@@ -33,7 +33,7 @@ class BiomeType(Enum):
 # Minimum ratio of the water edges to the total, in order to center become a water.
 MIN_WATER_EDGES_RATIO_TO_BE_WATER_CENTER = 0.25
 
-CHANCE_OF_WATER_EDGE_IN_MIDDLE = 0.05
+CHANCE_OF_WATER_EDGE_IN_MIDDLE = 0.25
 
 
 def assign_terrain_types_to_graph(
@@ -48,11 +48,14 @@ def assign_terrain_types_to_graph(
     Updates the fields of the graph.
     """
     
-    water_edges = [edge for edge in graph.edges
-                   if edge.is_edge_to_map_end() or np.random.rand() < chance_of_water_edge_in_middle]
+    water_edges = [
+        edge for edge in graph.edges \
+         if edge.is_edge_to_map_end() or np.random.rand() \
+         < (0.05 + max(edge.v0.x, edge.v0.y, 1.0-edge.v0.x, 1.0-edge.v0.y)**10) * chance_of_water_edge_in_middle
+    ]
     unexpanded_water_edges = water_edges
     
-    water_to_total_ratio = np.random.rand() / 5 + 0.5  # 50% - 70% of the edges will be the water.
+    water_to_total_ratio = np.random.rand() / 10 + 0.7  # 70% - 80% of the edges will be the water.
     water_edges_expected = int(len(graph.edges) * water_to_total_ratio)
     
     while len(water_edges) < water_edges_expected:

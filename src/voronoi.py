@@ -4,6 +4,7 @@ from typing import Optional, List, Tuple
 import matplotlib.pyplot as plt
 from scipy.spatial import Voronoi, voronoi_plot_2d
 from shapely.geometry import Polygon
+import time
 
 
 class VoronoiPolygons:
@@ -171,7 +172,7 @@ class VoronoiPolygons:
             for x, y in poly.exterior.coords[:-1]:
                 p = np.array([x, y])
                 for i, v in enumerate(new_vertices):
-                    if np.sum((v - p) ** 2) <= 1e-8:
+                    if np.sum((v - p) ** 2) <= 1e-14:
                         region_elements.append(i)
                         break
                 else:
@@ -227,19 +228,18 @@ class VoronoiPolygons:
             neighbors - indexes of neighbors regions for each region
             intersecions - indexes of vertices creating line separating each two neighbors
         """
-
+        
+        t0 = time.time()
         for iter in range(iterations + 1):
             self._vor = Voronoi(self._points)
             new_regions, new_vertices, new_centroids = \
                 VoronoiPolygons.find_new_polygons(vor=self._vor)
             self._points = new_centroids
-
         neighbors, intersecions = VoronoiPolygons.generate_neighbours(
             vor=self._vor,
             regions=new_regions,
             vertices=new_vertices,
         )
-
         return self._vor.points, self._points, new_vertices, new_regions, neighbors, intersecions
 
     @staticmethod
