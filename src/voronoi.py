@@ -4,7 +4,6 @@ from typing import Optional, List, Tuple
 import matplotlib.pyplot as plt
 from scipy.spatial import Voronoi, voronoi_plot_2d
 from shapely.geometry import Polygon
-import time
 
 
 class VoronoiPolygons:
@@ -16,13 +15,14 @@ class VoronoiPolygons:
         self,
         N: Optional[int] = 25,
         points: Optional[np.ndarray] = None,
-        centroids: Optional[np.ndarray] = None
+        centroids: Optional[np.ndarray] = None,
+        alpha : Optional[float] = 0.2
     ):
         self._points = points
         self._centroids = centroids
 
         if self._points is None:
-            self.generate_points(N=N)
+            self.generate_points(N=N, alpha=alpha)
 
         self._vor = Voronoi(self._points)
 
@@ -47,8 +47,15 @@ class VoronoiPolygons:
     def vor_c(self):
         return self._vor_c
 
-    def generate_points(self, N: int) -> None:
-        self._points = np.random.random((N, 2))
+    def generate_points(self, N: int, alpha: float) -> None:
+        self._points = np.random.random((int((1-alpha)*N), 2))
+        if alpha > 0:
+            N_ = N - int((1-alpha)*N)
+            new_points = np.random.random((N_, 2))/2
+            regions = np.array([[.5,.5],[.5,.0],[.0,.0],[.0,.5]])
+            region = regions[np.random.randint(0,4)]
+            new_points = new_points + region
+        self._points = np.vstack((self._points, new_points))
 
     def generate_centroids(self, N: int) -> None:
         centroids = np.zeros((N, 2))
@@ -229,7 +236,6 @@ class VoronoiPolygons:
             intersecions - indexes of vertices creating line separating each two neighbors
         """
         
-        t0 = time.time()
         for iter in range(iterations + 1):
             self._vor = Voronoi(self._points)
             new_regions, new_vertices, new_centroids = \
