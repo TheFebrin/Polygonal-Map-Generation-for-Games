@@ -30,10 +30,9 @@ Map is built from two graphs, *Nodes* and *Edges*.
 
 ![image](/images/edge-duality.png)
 
-
-
 <details><summary>class Graph:</summary>
 <p>
+
 ```python
 class Graph:
     Centers
@@ -45,6 +44,7 @@ class Graph:
 
 <details><summary>class Center:</summary>
 <p>
+
 ```python
 class Center:
     def __init__(self, x, y):
@@ -58,11 +58,15 @@ class Center:
         self.height = 0
         self.moisture = 0
 ```
+* `Center.neighbors` is a set of adjacent polygons
+* `Center.borders` is a set of bordering edges
+* `Center.corners` is a set of polygon corners
 </p>
 </details>
 
 <details><summary>class Corner:</summary>
 <p>
+
 ```python
 class Corner:
     def __init__(self, x, y):
@@ -77,11 +81,17 @@ class Corner:
         self.river = 0
         self.moisture = 0
 ```
+
+* `Corner.touches` is a set of polygons touching this corner
+* `Corner.protrudes` is a set of edges touching the corner
+* `Corner.adjacent` is a set of corners connected to this one
+
 </p>
 </details>
 
 <details><summary>class Edge:</summary>
 <p>
+
 ```python
 class Edge:
     def __init__(self, center1, center2, corner1, corner2):
@@ -91,8 +101,14 @@ class Edge:
         self.v1 = corner2
         self.river = 0
 ```
+
+* `Edge.d0` and `Edge.d1` are the polygons connected by the Delaunay edge
+* `Edge.v0` and `Edge.v1` are the corners connected by the Voronoi edge
+
 </p>
 </details>
+
+#### Islands
 
 ## Libraries
 * Python - version 3.7.3
