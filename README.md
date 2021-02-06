@@ -3,10 +3,17 @@
 
 ## Table of contents
 * [General info](#general-info)
-* [Screenshots](#screenshots)
-* [Results](#results)
+* [Polygons](#polygons)
+* [Map Representation](#map-representation)
+* [Islands](#islands)
+* [Elevation](#elevation)
+* [Rivers](#rivers)
+* [Moisture](#moisture)
+* [Biomes](#biomes)
+* [Final Map](#final-map)
 * [Libraries](#libraries)
 * [Status](#status)
+* [Credits](#credits)
 
 ## General info
 ![image](/images/overview.png)
@@ -109,6 +116,47 @@ class Edge:
 </details>
 
 #### Islands
+
+TODO
+
+![image](/images/islands.png)
+
+#### Elevation
+
+TODO
+
+![image](/images/elevation.png)
+![image](/images/heightmap.png)
+
+#### Rivers
+
+TODO
+
+![image](/images/downslope.png)
+![image](/images/rivers.png)
+
+#### Moisture
+
+TODO
+
+![image](/images/moisture.png)
+
+
+#### Biomes
+
+TODO
+
+![image](/images/biomes.png)
+
+
+#### Final Map
+
+TODO
+
+![image](/images/final_small.png)
+![image](/images/final_big.png)
+
+
 
 ## Libraries
 * Python - version 3.7.3
