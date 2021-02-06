@@ -332,7 +332,7 @@ class Graph:
         elif center.biome == BiomeType.TROPICAL_RAIN_FOREST: color = (32/255, 78/255, 23/255)
         elif center.biome == BiomeType.TROPICAL_SEASONAL_FOREST: color = (91/255, 124/255, 64/255)
         elif center.biome == BiomeType.SUBTROPICAL_DESERT: color = (230/255, 225/255, 168/255)
-        elif center.biome == BiomeType.MARSH: color = 'darkseagreen'
+        elif center.biome == BiomeType.MARSH: color = (148/255, 217/255, 200/255)
         elif center.biome == BiomeType.ICE: color = 'lightcyan'
         elif center.biome == BiomeType.DEEPOCEAN: color = 'dodgerblue'
         else:
@@ -571,7 +571,7 @@ class Graph:
                 else:
                     center.biome = BiomeType.DEEPOCEAN
             elif center.terrain_type == TerrainType.LAKE:
-                if center.height < 0.3:
+                if center.height < 0.2:
                     center.biome = BiomeType.MARSH
                 elif center.height > 0.9:
                     center.biome = BiomeType.ICE
