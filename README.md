@@ -35,6 +35,20 @@ Here we also plotted edges to the neighbouring polygons.
 Map is built from two graphs, *Nodes* and *Edges*.
 *Nodes* graph has edges between every neighbouring polygons. *Edges* graph has edges between every neighbouring corners.
 
+<details><summary>Terrain types:</summary>
+<p>
+
+```python
+class TerrainType(Enum):
+    OCEAN = 1
+    LAND = 2
+    LAKE = 3
+    COAST = 4
+```
+</p>
+</details>
+
+
 ![image](/images/edge-duality.png)
 
 <details><summary>class Graph:</summary>
@@ -123,14 +137,34 @@ TODO
 
 #### Elevation
 
-TODO
+First we set the elevation to be the distance from the coast.
+
+TODO (SWi) write about redistribution
+
+Elevation is very important for:
+* Biomes types:
+	* high elevations: get snow, rock, tundra
+	* medium elevations: get shrubs, deserts, forests, and grassland
+	* low elevations: get rain forests, grassland, and beaches
+* Rivers flow from high elevations down to the coast. Having elevations that always increase away from the coast means that there’s no local minima that complicate river generation.
 
 ![image](/images/elevation.png)
+
 ![image](/images/heightmap.png)
 
 #### Rivers
 
-TODO
+First we defined *downslope*. From each *Corner* it is an arrow that points towards its lowest neighbouring corner.
+
+We say that rivers flow from the highest points downwards following the *downslopes*.
+
+We chose a random point in the mountains and we follow *downslopes* until we reach a lake or the ocean.
+
+If more than one river is flowing through a given edge the river becomes visually thicker. The formula for width of an edge with *k* rivers is:
+
+```python
+river_width(k) = 2 + 2 * sqrt(k)
+```
 
 ![image](/images/downslope.png)
 ![image](/images/rivers.png)
@@ -139,12 +173,41 @@ TODO
 
 TODO
 
+![image](/images/moisture_diagram.png)
 ![image](/images/moisture.png)
 
 
 #### Biomes
 
 TODO
+
+<details><summary>All biomes:</summary>
+<p>
+
+```python
+class BiomeType(Enum):
+    OCEAN = 1
+    LAKE = 2
+    COAST = 3
+    SNOW = 4
+    TUNDRA = 5
+    BARE = 6
+    SCORCHED = 7
+    TAIGA = 8
+    SHRUBLAND = 9
+    TEMPERATE_DESERT = 10
+    TEMPERATE_RAIN_FOREST = 11
+    TEMPERATE_DECIDOUS_FOREST = 12
+    GRASSLAND = 13
+    TROPICAL_RAIN_FOREST = 14
+    TROPICAL_SEASONAL_FOREST = 15
+    SUBTROPICAL_DESERT = 16
+    MARSH = 17
+    ICE = 18
+    DEEPOCEAN = 19
+```
+</p>
+</details>
 
 ![image](/images/biomes.png)
 
