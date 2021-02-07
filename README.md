@@ -137,9 +137,21 @@ TODO
 
 #### Elevation
 
-First we set the elevation to be the distance from the coast.
+The main rule we followed is the more polygons there are between a point and the closest edge of the map, the higher is the elevation of this point. We calculate the elevation of corners first and then proceed with the polygons (centers).
 
-TODO (SWi) write about redistribution
+##### Height of corners
+
+We run BFS from every corner which is on the edge of a map. For every *neighbor* of the *current_corner* we update the *neighbor.height* with *current_corner.height + epsilon* if *current_corner.height + epsilon < neighbor.height*. 
+If *current_corner* or *neighbor* is of type Ocean or Lake, the epsilon is equal to 0.01. Otherwise (when both of them are Land/Coast) it's 1.0. This way lakes will be more or less flat, oceans will be deep on the edges of the map and a little bit more shallow near the coast and land will become more and more elevated the closer it is to the map's center of mass. 
+
+##### Height redistribution
+
+Before assigning elevation for centers we redistribute elevation of corners so that they will take values from 0 to 1.0 and there will be less higher points on a map than the lower ones. It also smooths out the terrain.  
+
+##### Height of centers (polygons)
+
+Elevation of centers is simply the average of the elevation of all neighboring corners. 
+
 
 Elevation is very important for:
 * Biomes types:
