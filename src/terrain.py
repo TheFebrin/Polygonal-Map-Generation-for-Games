@@ -35,11 +35,13 @@ MIN_WATER_EDGES_RATIO_TO_BE_WATER_CENTER = 0.25
 
 CHANCE_OF_WATER_EDGE_IN_MIDDLE = 0.05
 
+WATER_TO_TOTAL_RATIO = 0.4
 
 def assign_terrain_types_to_graph(
     graph,
     min_water_ratio=MIN_WATER_EDGES_RATIO_TO_BE_WATER_CENTER,
     chance_of_water_edge_in_middle=CHANCE_OF_WATER_EDGE_IN_MIDDLE,
+    water_to_total_ratio=WATER_TO_TOTAL_RATIO
 ):
     """
     :param graph: Mutable graph
@@ -82,7 +84,7 @@ def assign_terrain_types_to_graph(
     water_edges = [edge for edge in graph.edges if is_good_beginner(edge)]
     unexpanded_water_edges = water_edges
     
-    water_to_total_ratio = np.random.rand() / 10 + 0.7  # 70% - 80% of the edges will be the water.
+    water_to_total_ratio += (np.random.rand() - 0.5) / 10
     water_edges_expected = int(len(graph.edges) * water_to_total_ratio)
     
     while len(water_edges) < water_edges_expected:
@@ -93,7 +95,7 @@ def assign_terrain_types_to_graph(
         # Set all the edges adjacent to the selected one as the ocean.
         for corner in [selected_edge.v0, selected_edge.v1]:
             for edge in corner.protrudes:
-                if edge is not water_edges:
+                if edge not in water_edges:
                     water_edges.append(edge)
                     unexpanded_water_edges.append(edge)
     

@@ -183,15 +183,28 @@ river_width(k) = 2 + 2 * sqrt(k)
 
 #### Moisture
 
-TODO
+Instead of the standard approach, where the localization of rivers and lakes depends on the moisture, we decided to first create water sources and then define the moisture of the terrain based on the distance from the freshwater.
 
-![image](/images/moisture_diagram.png)
+First, we assigned starting moisture of corners. If the corner is a port of the river the moisture is equal to `max(1.0, min(3.0, 0.25*corner.river))`. If the corner touches the lake then the moisture is equal to `1.0`.
+
+Then we run BFS from every corner with nonzero stating moisture. The moisture of a corner is equal to:
+`max(corner.moisture, 0.9*max(moisture of neighbors))`.
+
+After the moisture-spreading process, we set moisture of corners touches the ocean as 1.0.
+
+The next step was to assign centers moisture. It's given by:
+`mean(min(1.0, corner.moisture) for corner in center.corners)`
+
+We decided to redistribute those values to get equal distribution of dry and wet tiles. Finally, the moisture of the tile is equal to the position on the sorted list of moistures given by the previous step.
+
 ![image](/images/moisture.png)
 
 
 #### Biomes
 
 TODO
+
+![image](/images/moisture_diagram.png)
 
 <details><summary>All biomes:</summary>
 <p>
