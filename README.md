@@ -191,7 +191,15 @@ TODO
 
 #### Biomes
 
-TODO
+Each polygon has a biome type assigned to it. They can be easily defined using the moisture and elevation values.
+
+![image](/images/biome_types.png)
+
+
+
+Biomes in upper right corner are snowy mountains, lower right corner is a tropical rain forest, upper left corner are scorched mountains and lower left corner is a desert. Besides that, we also distinguish ocean from deep ocean - the latter are darker and have smaller elevation. 
+
+Below are listed all types of biomes that we use:
 
 <details><summary>All biomes:</summary>
 <p>
