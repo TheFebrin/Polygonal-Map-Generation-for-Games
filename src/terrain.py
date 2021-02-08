@@ -33,13 +33,18 @@ class BiomeType(Enum):
 # Minimum ratio of the water edges to the total, in order to center become a water.
 MIN_WATER_EDGES_RATIO_TO_BE_WATER_CENTER = 0.25
 
-CHANCE_OF_WATER_EDGE_IN_MIDDLE = 0.05
+CHANCE_OF_WATER_EDGE_IN_MIDDLE = 0.01
 
+OCEAN_TO_TOTAL_RATIO = 0.4
+
+LAKE_TO_TOTAL_RATIO = 0.025
 
 def assign_terrain_types_to_graph(
     graph,
     min_water_ratio=MIN_WATER_EDGES_RATIO_TO_BE_WATER_CENTER,
     chance_of_water_edge_in_middle=CHANCE_OF_WATER_EDGE_IN_MIDDLE,
+    ocean_to_total_ratio=OCEAN_TO_TOTAL_RATIO,
+    lake_to_total_ratio=LAKE_TO_TOTAL_RATIO,
 ):
     """
     :param graph: Mutable graph
@@ -76,16 +81,20 @@ def assign_terrain_types_to_graph(
               and  region[1]-0.2 <= edge.v0.y <= region[1] \
               and np.random.random() < 0.5:
                 return True
-        return max(edge.v0.x, edge.v0.y, 1.0-edge.v0.x, 1.0-edge.v0.y)**3 \
-               * chance_of_water_edge_in_middle > np.random.random()
+        return False
+        
+    def is_good_lake_beginner(edge):
+#         return max(edge.v0.x, edge.v0.y, 1.0-edge.v0.x, 1.0-edge.v0.y)**2 \
+#                * chance_of_water_edge_in_middle > np.random.random()
+        return chance_of_water_edge_in_middle > np.random.random()
        
     water_edges = [edge for edge in graph.edges if is_good_beginner(edge)]
     unexpanded_water_edges = water_edges
     
-    water_to_total_ratio = np.random.rand() / 10 + 0.7  # 70% - 80% of the edges will be the water.
-    water_edges_expected = int(len(graph.edges) * water_to_total_ratio)
+    ocean_to_total_ratio += (np.random.rand() - 0.5) / 10
+    ocean_edges_expected = int(len(graph.edges) * ocean_to_total_ratio)
     
-    while len(water_edges) < water_edges_expected:
+    while len(water_edges) < ocean_edges_expected:
         selected_edge_idx = np.random.randint(len(unexpanded_water_edges))
         selected_edge = unexpanded_water_edges[selected_edge_idx]
         unexpanded_water_edges.remove(selected_edge)
@@ -93,7 +102,23 @@ def assign_terrain_types_to_graph(
         # Set all the edges adjacent to the selected one as the ocean.
         for corner in [selected_edge.v0, selected_edge.v1]:
             for edge in corner.protrudes:
-                if edge is not water_edges:
+                if edge not in water_edges:
+                    water_edges.append(edge)
+                    unexpanded_water_edges.append(edge)
+    
+    lake_edges_expected = ocean_edges_expected + int(len(graph.edges) * lake_to_total_ratio)
+    unexpanded_water_edges = [edge for edge in graph.edges
+                                      if edge not in water_edges and is_good_lake_beginner(edge)]
+    
+    while len(water_edges) < lake_edges_expected:
+        selected_edge_idx = np.random.randint(len(unexpanded_water_edges))
+        selected_edge = unexpanded_water_edges[selected_edge_idx]
+        unexpanded_water_edges.remove(selected_edge)
+        
+        # Set all the edges adjacent to the selected one as the ocean.
+        for corner in [selected_edge.v0, selected_edge.v1]:
+            for edge in corner.protrudes:
+                if edge not in water_edges:
                     water_edges.append(edge)
                     unexpanded_water_edges.append(edge)
     
